@@ -53,6 +53,43 @@ def set_data_source(datasets: Dict):
     load_cluster_models()
 
 
+# ---------------------- Utilidades de datasets limpios ----------------------
+def list_datasets() -> Dict:
+    """Retorna metadatos de los datasets cargados en memoria."""
+    meta: Dict[str, Dict] = {}
+    for name, df in DATA.items():
+        try:
+            meta[name] = {
+                "rows": int(len(df)),
+                "cols": int(df.shape[1]),
+                "columns": df.columns.tolist(),
+            }
+        except Exception:
+            meta[name] = {"rows": 0, "cols": 0, "columns": []}
+    return meta
+
+
+def get_dataset_sample(name: str, limit: int = 100, columns: List[str] | None = None) -> Dict:
+    """Devuelve un sample (head) del dataset solicitado con columnas opcionales."""
+    if name not in DATA:
+        return {"error": f"Dataset '{name}' no disponible", "available": list(DATA.keys())}
+    df = DATA[name]
+    if columns:
+        cols = [c for c in columns if c in df.columns]
+        if cols:
+            df = df.loc[:, cols]
+    limit = max(1, min(int(limit), 1000))
+    sample = df.head(limit).to_dict(orient="records")
+    return {
+        "name": name,
+        "rows": int(len(df)),
+        "cols": int(df.shape[1]),
+        "columns": df.columns.tolist(),
+        "sample": sample,
+        "limit": limit,
+    }
+
+
 # Conversión y procesamiento de puntajes enviados a la API
 def _scores_to_dataframe(scores: Dict) -> pd.DataFrame:
     """

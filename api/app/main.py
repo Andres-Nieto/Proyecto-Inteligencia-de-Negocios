@@ -95,3 +95,17 @@ def summary():
 def delete_history():
     from .services import clear_history
     return clear_history()
+
+
+#  Datasets limpios: listar y samplear
+@app.get("/datasets", summary="Listar datasets limpios disponibles")
+def datasets():
+    from .services import list_datasets
+    return {"datasets": list_datasets()}
+
+
+@app.get("/dataset/{name}", summary="Sample de un dataset limpio")
+def dataset_sample(name: str, limit: int = 100, columns: str | None = None):
+    from .services import get_dataset_sample
+    cols = [c.strip() for c in columns.split(",")] if columns else None
+    return get_dataset_sample(name, limit=limit, columns=cols)

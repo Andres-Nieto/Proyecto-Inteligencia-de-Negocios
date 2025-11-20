@@ -38,10 +38,10 @@ with st.sidebar:
     st.header("Entrada de Puntajes")
     st.caption("Ingresa puntajes para generar recomendaciones.")
     id_student = st.text_input("ID estudiante (opcional)")
-    punt_global = st.number_input("Puntaje Global", min_value=0, max_value=300, value=0, step=1, format="%d")
-    punt_matematicas = st.number_input("Matemáticas", min_value=0, max_value=300, value=0, step=1, format="%d")
-    punt_lectura_critica = st.number_input("Lectura Crítica", min_value=0, max_value=300, value=0, step=1, format="%d")
-    punt_ingles = st.number_input("Inglés", min_value=0, max_value=300, value=0, step=1, format="%d")
+    punt_global = st.number_input("Puntaje Global", min_value=0, max_value=500, value=0, step=1, format="%d")
+    punt_matematicas = st.number_input("Matemáticas", min_value=0, max_value=500, value=0, step=1, format="%d")
+    punt_lectura_critica = st.number_input("Lectura Crítica", min_value=0, max_value=500, value=0, step=1, format="%d")
+    punt_ingles = st.number_input("Inglés", min_value=0, max_value=500, value=0, step=1, format="%d")
 
     st.markdown("---")
     do_predict = st.button("Generar Recomendaciones")
@@ -185,6 +185,8 @@ with col_left:
     else:
         st.caption("Sin historial disponible.")
 
+    # (Sección de datasets movida a ancho completo más abajo)
+
 # ------------------------- Columna Derecha -------------------------
 with col_right:
     st.subheader("Búsqueda por Estudiante")
@@ -222,5 +224,191 @@ with col_right:
     else:
         st.error("API no disponible")
 
+# --- Exploración de datasets limpios desde la API (ancho completo) ---
+st.markdown("---")
+with st.container():
+    st.markdown("### Datasets limpios")
+
+    meta = api_get("/datasets")
+    if isinstance(meta, dict) and "datasets" in meta and meta["datasets"]:
+        ds_names = list(meta["datasets"].keys())
+
+        # Controles principales (ancho completo)
+        c_top1, c_top2, c_top3, c_top4 = st.columns([1.6, 1, 1, 1])
+        with c_top1:
+            ds_sel = st.selectbox("Selecciona un dataset", ds_names, index=0)
+        rows = int(meta["datasets"][ds_sel].get("rows", 0))
+        cols_total = int(meta["datasets"][ds_sel].get("cols", 0))
+        cols_meta = meta["datasets"][ds_sel].get("columns", [])
+        # Solo columnas de puntajes
+        score_cols = [
+            c for c in cols_meta
+            if c == "punt_global" or c.startswith("punt_") or (c.startswith("mod_") and c.endswith("_punt"))
+        ]
+        # Restricción específica para SaberPro: quitar 'competen', 'comuni' y 'razona'
+        if ds_sel.lower() == "saberpro":
+            allowed_saberpro = {"mod_lectura_critica_punt", "mod_ingles_punt", "mod_razona_cuantitat_punt", "punt_global"}
+            score_cols = [c for c in score_cols if c in allowed_saberpro]
+
+        # Opciones de vista
+        c_opt1, c_opt2, c_opt3 = st.columns([1, 1, 2])
+        with c_opt1:
+            limit = st.slider("Filas a mostrar", 10, 500, 100, step=10)
+        with c_opt2:
+            use_friendly = st.checkbox("Nombres amigables", value=True)
+
+        # Consumir API
+        params = f"?limit={limit}"
+        if score_cols:
+            params += "&columns=" + ",".join(score_cols)
+        data = api_get(f"/dataset/{ds_sel}{params}")
+
+        if isinstance(data, dict) and "sample" in data:
+            df_sample = pd.DataFrame(data["sample"]) if data.get("sample") else pd.DataFrame(columns=score_cols)
+
+            # Renombrar columnas a etiquetas amigables (solo visual)
+            friendly_map = {
+                "punt_global": "Puntaje Global",
+                "punt_matematicas": "Matemáticas",
+                "mod_razona_cuantitat_punt": "Matemáticas",
+                "punt_lectura_critica": "Lectura Crítica",
+                "mod_lectura_critica_punt": "Lectura Crítica",
+                "punt_ingles": "Inglés",
+                "mod_ingles_punt": "Inglés",
+                "punt_c_naturales": "Ciencias Naturales",
+                "punt_sociales_ciudadanas": "Sociales y Ciudadanas",
+            }
+            df_view = df_sample.copy()
+            if use_friendly:
+                df_view = df_view.rename(columns=friendly_map)
+
+            # Pestañas: Tabla / Resumen
+            tab1, tab2 = st.tabs(["Tabla", "Resumen"])
+            with tab1:
+                st.dataframe(df_view, use_container_width=True, height=520)
+                csv = df_view.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    "Descargar CSV (sample)",
+                    data=csv,
+                    file_name=f"{ds_sel}_scores_sample.csv",
+                    mime="text/csv"
+                )
+                st.caption("Vista limitada a columnas de puntajes para mayor legibilidad.")
+
+            with tab2:
+                if not df_sample.empty:
+                    means = df_sample.mean(numeric_only=True).dropna()
+                    if not means.empty:
+                        fig = go.Figure()
+                        fig.add_trace(go.Bar(
+                            x=[friendly_map.get(c, c) for c in means.index],
+                            y=means.values,
+                            text=[round(v,1) for v in means.values],
+                            textposition="outside"
+                        ))
+                        max_val = float(means.max())
+                        headroom = max(15.0, max_val * 0.12)  # espacio extra para que no se corte el texto superior
+                        fig.update_layout(
+                            title="Promedio de puntajes (muestra)",
+                            yaxis_title="Puntaje",
+                            yaxis=dict(range=[0, max_val + headroom]),
+                            margin=dict(t=80, b=40, l=40, r=20)
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.info("No hay datos numéricos para resumir.")
+                else:
+                    st.info("No hay filas en la muestra actual.")
+        else:
+            if isinstance(data, dict) and data.get("error"):
+                st.warning(data["error"])
+            else:
+                st.warning("No fue posible cargar el sample.")
+    else:
+        st.info("API sin datasets cargados.")
+
 st.markdown("---")
 st.caption("Sprint 4 – Dashboard interactivo para recomendaciones ICFES")
+
+# ------------------------- Distribución – Histograma -------------------------
+st.markdown("---")
+with st.container():
+    st.markdown("### Distribución – Histograma (puntajes)")
+
+    meta = api_get("/datasets")
+    if isinstance(meta, dict) and "datasets" in meta and meta["datasets"]:
+        ds_names = list(meta["datasets"].keys())
+        c1, c2, c3 = st.columns([1.4, 1, 1])
+        with c1:
+            ds_sel = st.selectbox("Dataset", ds_names, index=0, key="dist_ds")
+        with c2:
+            limit = st.slider("Filas (muestra)", 100, 1000, 500, step=50, help="La API limita a 1000 filas.")
+        with c3:
+            dropna = st.checkbox("Omitir NaN", value=True)
+
+        cols_meta = meta["datasets"][ds_sel].get("columns", [])
+        score_cols_all = [
+            c for c in cols_meta
+            if c == "punt_global" or c.startswith("punt_") or (c.startswith("mod_") and c.endswith("_punt"))
+        ]
+        if ds_sel.lower() == "saberpro":
+            allowed_saberpro = {"mod_lectura_critica_punt", "mod_ingles_punt", "mod_razona_cuantitat_punt", "punt_global"}
+            score_cols_all = [c for c in score_cols_all if c in allowed_saberpro]
+
+        params = f"?limit={limit}&columns=" + ",".join(score_cols_all) if score_cols_all else f"?limit={limit}"
+        data = api_get(f"/dataset/{ds_sel}{params}")
+        df_scores = pd.DataFrame(data.get("sample", [])) if isinstance(data, dict) else pd.DataFrame()
+        if dropna and not df_scores.empty:
+            df_scores = df_scores.dropna(how="all")
+
+        if df_scores.empty or not score_cols_all:
+            st.info("No hay datos suficientes para graficar.")
+        else:
+            for c in score_cols_all:
+                if c in df_scores.columns:
+                    df_scores[c] = pd.to_numeric(df_scores[c], errors="coerce")
+
+            # Construir nombres amigables para el selector
+            friendly_map = {
+                "punt_global": "Puntaje Global",
+                "punt_matematicas": "Matemáticas",
+                "mod_razona_cuantitat_punt": "Matemáticas",
+                "punt_lectura_critica": "Lectura Crítica",
+                "mod_lectura_critica_punt": "Lectura Crítica",
+                "punt_ingles": "Inglés",
+                "mod_ingles_punt": "Inglés",
+                "punt_c_naturales": "Ciencias Naturales",
+                "punt_sociales_ciudadanas": "Sociales y Ciudadanas",
+            }
+            # Preferir columnas 'punt_' cuando hay duplicados de la misma materia
+            label_to_col = {}
+            for c in [c for c in score_cols_all if c in df_scores.columns]:
+                label = friendly_map.get(c, c)
+                if label not in label_to_col:
+                    label_to_col[label] = c
+                else:
+                    if c.startswith("punt_") and not label_to_col[label].startswith("punt_"):
+                        label_to_col[label] = c
+
+            labels_options = list(label_to_col.keys())
+            colh1, colh2, colh3 = st.columns([1.2, 1, 1])
+            with colh1:
+                chosen_label = st.selectbox("Variable", labels_options, key="hist_label") if labels_options else None
+                col_sel = label_to_col.get(chosen_label) if chosen_label else None
+            with colh2:
+                bins = st.slider("Bins", 5, 100, 30)
+            if not col_sel:
+                st.info("No hay variables disponibles para graficar.")
+            else:
+                series = df_scores[col_sel].dropna()
+                vmin, vmax = (float(series.min()), float(series.max())) if not series.empty else (0.0, 1.0)
+                with colh3:
+                    range_sel = st.slider("Rango", min_value=float(vmin), max_value=float(vmax), value=(float(vmin), float(vmax)))
+
+                s_filtered = series[(series >= range_sel[0]) & (series <= range_sel[1])]
+                axis_label = chosen_label or col_sel
+                fig_h = px.histogram(s_filtered, nbins=bins, labels={"value": axis_label}, marginal="rug")
+                fig_h.update_layout(xaxis_title="Puntaje", yaxis_title="Frecuencia")
+                st.plotly_chart(fig_h, use_container_width=True)
+    else:
+        st.info("API sin datasets cargados.")
