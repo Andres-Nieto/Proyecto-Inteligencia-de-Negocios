@@ -56,3 +56,8 @@ class ClusterResponse(BaseModel):
     """
     cluster: int
     recommendations: List[str]
+
+class ForecastRequest(BaseModel):
+    group_col: str   # ciudad, sede, colegio
+    group_value: str
+    target_col: str  # punt_global, punt_matematicas, etc

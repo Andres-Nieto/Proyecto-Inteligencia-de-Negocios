@@ -5,6 +5,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 from typing import Any, Dict
 
+@st.cache_data
+def load_data():
+    return pd.read_csv("data/Dataset2-SaberPro(2021-2024)_LIMPIO.csv")
+
 API_BASE = "http://127.0.0.1:8000"
 
 st.set_page_config(page_title="ICFES Dashboard", layout="wide")
@@ -116,7 +120,7 @@ with col_left:
                     ))
                     max_axis = max(300, int(max(student_scores + list(global_means.values))))
                     fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max_axis])), showlegend=True)
-                    st.plotly_chart(fig_radar, use_container_width=True)
+                    st.plotly_chart(fig_radar, width='stretch')
             else:
                 st.caption("Historial vacío; genera más consultas para ver comparación.")
 
@@ -168,7 +172,7 @@ with col_left:
             fig_avg = go.Figure()
             fig_avg.add_trace(go.Bar(x=avg_scores.index, y=avg_scores.values, text=avg_scores.values, textposition="outside"))
             fig_avg.update_layout(title="Promedio General de Puntajes (Historial Filtrado)")
-            st.plotly_chart(fig_avg, use_container_width=True)
+            st.plotly_chart(fig_avg, width='stretch')
     else:
         st.info("Sin datos en el historial para generar estadísticas.")
 
@@ -181,7 +185,7 @@ with col_left:
             punt_cols = df_hist["puntajes"].apply(pd.Series)
             punt_cols = punt_cols.loc[:, [c for c in punt_cols.columns if c not in df_hist.columns]]
             df_hist = pd.concat([df_hist.drop(columns=["puntajes"]), punt_cols], axis=1)
-        st.dataframe(df_hist.tail(50), use_container_width=True)
+        st.dataframe(df_hist.tail(50), width='stretch')
     else:
         st.caption("Sin historial disponible.")
 
@@ -203,7 +207,7 @@ with col_right:
                     punt_cols = punt_cols.loc[:, [c for c in punt_cols.columns if c not in df_stu.columns]]
                     df_stu = pd.concat([df_stu.drop(columns=["puntajes"]), punt_cols], axis=1)
                 st.write(f"Consultas registradas: {len(df_stu)}")
-                st.dataframe(df_stu.tail(20), use_container_width=True)
+                st.dataframe(df_stu.tail(20), width='stretch')
             else:
                 st.info("No hay registros para ese estudiante.")
 
@@ -215,120 +219,6 @@ with col_right:
             st.success(r["message"])
         else:
             st.error(r.get("error", "Error desconocido"))
-
-    st.markdown("---")
-    st.caption(f"API base: {API_BASE}")
-    health = api_get("/health")
-    if health.get("status") == "ok":
-        st.success("API OK")
-    else:
-        st.error("API no disponible")
-
-# --- Exploración de datasets limpios desde la API (ancho completo) ---
-st.markdown("---")
-with st.container():
-    st.markdown("### Datasets limpios")
-
-    meta = api_get("/datasets")
-    if isinstance(meta, dict) and "datasets" in meta and meta["datasets"]:
-        ds_names = list(meta["datasets"].keys())
-
-        # Controles principales (ancho completo)
-        c_top1, c_top2, c_top3, c_top4 = st.columns([1.6, 1, 1, 1])
-        with c_top1:
-            ds_sel = st.selectbox("Selecciona un dataset", ds_names, index=0)
-        rows = int(meta["datasets"][ds_sel].get("rows", 0))
-        cols_total = int(meta["datasets"][ds_sel].get("cols", 0))
-        cols_meta = meta["datasets"][ds_sel].get("columns", [])
-        # Solo columnas de puntajes
-        score_cols = [
-            c for c in cols_meta
-            if c == "punt_global" or c.startswith("punt_") or (c.startswith("mod_") and c.endswith("_punt"))
-        ]
-        # Restricción específica para SaberPro: quitar 'competen', 'comuni' y 'razona'
-        if ds_sel.lower() == "saberpro":
-            allowed_saberpro = {"mod_lectura_critica_punt", "mod_ingles_punt", "mod_razona_cuantitat_punt", "punt_global"}
-            score_cols = [c for c in score_cols if c in allowed_saberpro]
-
-        # Opciones de vista
-        c_opt1, c_opt2, c_opt3 = st.columns([1, 1, 2])
-        with c_opt1:
-            limit = st.slider("Filas a mostrar", 10, 500, 100, step=10)
-        with c_opt2:
-            use_friendly = st.checkbox("Nombres amigables", value=True)
-
-        # Consumir API
-        params = f"?limit={limit}"
-        if score_cols:
-            params += "&columns=" + ",".join(score_cols)
-        data = api_get(f"/dataset/{ds_sel}{params}")
-
-        if isinstance(data, dict) and "sample" in data:
-            df_sample = pd.DataFrame(data["sample"]) if data.get("sample") else pd.DataFrame(columns=score_cols)
-
-            # Renombrar columnas a etiquetas amigables (solo visual)
-            friendly_map = {
-                "punt_global": "Puntaje Global",
-                "punt_matematicas": "Matemáticas",
-                "mod_razona_cuantitat_punt": "Matemáticas",
-                "punt_lectura_critica": "Lectura Crítica",
-                "mod_lectura_critica_punt": "Lectura Crítica",
-                "punt_ingles": "Inglés",
-                "mod_ingles_punt": "Inglés",
-                "punt_c_naturales": "Ciencias Naturales",
-                "punt_sociales_ciudadanas": "Sociales y Ciudadanas",
-            }
-            df_view = df_sample.copy()
-            if use_friendly:
-                df_view = df_view.rename(columns=friendly_map)
-
-            # Pestañas: Tabla / Resumen
-            tab1, tab2 = st.tabs(["Tabla", "Resumen"])
-            with tab1:
-                st.dataframe(df_view, use_container_width=True, height=520)
-                csv = df_view.to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    "Descargar CSV (sample)",
-                    data=csv,
-                    file_name=f"{ds_sel}_scores_sample.csv",
-                    mime="text/csv"
-                )
-                st.caption("Vista limitada a columnas de puntajes para mayor legibilidad.")
-
-            with tab2:
-                if not df_sample.empty:
-                    means = df_sample.mean(numeric_only=True).dropna()
-                    if not means.empty:
-                        fig = go.Figure()
-                        fig.add_trace(go.Bar(
-                            x=[friendly_map.get(c, c) for c in means.index],
-                            y=means.values,
-                            text=[round(v,1) for v in means.values],
-                            textposition="outside"
-                        ))
-                        max_val = float(means.max())
-                        headroom = max(15.0, max_val * 0.12)  # espacio extra para que no se corte el texto superior
-                        fig.update_layout(
-                            title="Promedio de puntajes (muestra)",
-                            yaxis_title="Puntaje",
-                            yaxis=dict(range=[0, max_val + headroom]),
-                            margin=dict(t=80, b=40, l=40, r=20)
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        st.info("No hay datos numéricos para resumir.")
-                else:
-                    st.info("No hay filas en la muestra actual.")
-        else:
-            if isinstance(data, dict) and data.get("error"):
-                st.warning(data["error"])
-            else:
-                st.warning("No fue posible cargar el sample.")
-    else:
-        st.info("API sin datasets cargados.")
-
-st.markdown("---")
-st.caption("Sprint 4 – Dashboard interactivo para recomendaciones ICFES")
 
 # ------------------------- Distribución – Histograma -------------------------
 st.markdown("---")
@@ -409,6 +299,95 @@ with st.container():
                 axis_label = chosen_label or col_sel
                 fig_h = px.histogram(s_filtered, nbins=bins, labels={"value": axis_label}, marginal="rug")
                 fig_h.update_layout(xaxis_title="Puntaje", yaxis_title="Frecuencia")
-                st.plotly_chart(fig_h, use_container_width=True)
+                st.plotly_chart(fig_h, width='stretch')
     else:
         st.info("API sin datasets cargados.")
+
+st.subheader("📈 Predicción por Universidad")
+
+# 1. Cargar dataset
+df = load_data()
+group_col = "inst_nombre_institucion"
+
+# Todas las universidades disponibles
+@st.cache_data
+def get_universidades(df):
+    return sorted(df["inst_nombre_institucion"].astype(str).unique().tolist())
+
+df[group_col] = df[group_col].astype(str)
+valid_unis = get_universidades(df)
+
+
+group_value = st.selectbox("Seleccionar Universidad", valid_unis)
+
+# Variable objetivo
+target_options = {
+    "Puntaje Global": "punt_global",
+    "Lectura Crítica": "mod_lectura_critica_punt",
+    "Matemáticas": "mod_razona_cuantitat_punt",
+    "Inglés": "mod_ingles_punt"
+}
+
+selected_label = st.selectbox("Variable a pronosticar", list(target_options.keys()))
+
+target_col = target_options[selected_label]
+
+
+
+if st.button("Generar Predicción"):
+
+    payload = {
+        "group_col": group_col,
+        "group_value": group_value,
+        "target_col": target_col
+    }
+
+    resp = api_post("/forecast", payload)
+
+    if "error" in resp:
+        st.error(resp["error"])
+        st.stop()
+
+    # Histórico
+    df_hist = pd.DataFrame(resp["historical"])
+    df_hist["periodo"] = df_hist["periodo"].astype(int)
+
+    # Construcción gráfica
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=df_hist["periodo"],
+        y=df_hist["value"],
+        mode="lines+markers",
+        name="Histórico",
+        line=dict(width=3)
+    ))
+
+    # Predicción
+    fig.add_trace(go.Scatter(
+        x=[resp["next_year"]],
+        y=[resp["forecast"]],
+        mode="markers+text",
+        name="Predicción",
+        marker=dict(size=14),
+        text=[f"Predicción {resp['next_year']}"],
+        textposition="top center"
+    ))
+
+    fig.update_layout(
+        title=f"Predicción del puntaje {target_col.replace('_', ' ')} en la Universidad {group_value}",
+        xaxis_title="Año",
+        yaxis_title="Puntaje promedio",
+        template="plotly_white",
+        xaxis=dict(
+            tickmode="linear",
+            dtick=1
+        )
+    )
+
+    st.plotly_chart(fig, width='stretch')
+
+    st.metric(
+        label=f"Predicción {resp['next_year']}",
+        value=f"{resp['forecast']:.2f}"
+    )

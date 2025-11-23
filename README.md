@@ -3,9 +3,9 @@ Sistema completo de análisis, clusterización, predicción y recomendaciones ac
 
 ## 👥 Autores
 - Oscar Daniel Casallas Lozano – 2220221011
-- Andrés Fernando Nieto ... - 
+- Andres Fernando Nieto Rodríguez - 2220231083
 - David Santiago Manchola Serna - 2220221093
-- 
+
 ---
 
 # 📑 **Tabla de Contenidos**
@@ -13,21 +13,22 @@ Sistema completo de análisis, clusterización, predicción y recomendaciones ac
   - [👥 Autores](#-autores)
 - [📑 **Tabla de Contenidos**](#-tabla-de-contenidos)
 - [🎯 **Descripción del Proyecto**](#-descripción-del-proyecto)
+- [🧪 Sprint 1: Busca y limpieza de datasets](#-sprint-1-busca-y-limpieza-de-datasets)
 - [📂 **Datasets**](#-datasets)
     - [📌 **Fuente**](#-fuente)
-    - [📥 Descarga](#-descarga)
-    - [📁 Ubicación esperada](#-ubicación-esperada)
 - [🏗️ **Arquitectura del Proyecto**](#️-arquitectura-del-proyecto)
 - [🧰 **Requisitos Previos**](#-requisitos-previos)
     - [✔️ Software necesario](#️-software-necesario)
-    - [✔️ Verificar versiones](#️-verificar-versiones)
 - [⚙️ Instalación y Configuración](#️-instalación-y-configuración)
-  - [1️⃣ Clonar el repositorio](#1️⃣-clonar-el-repositorio)
-  - [2️⃣ Crear Entorno Virtual](#2️⃣-crear-entorno-virtual)
-  - [3️⃣ Instalar Dependencias](#3️⃣-instalar-dependencias)
-  - [4️⃣ Configurar Kernel de Jupyter (para Sprint 2)](#4️⃣-configurar-kernel-de-jupyter-para-sprint-2)
-  - [5️⃣ Descargar y Ubicar Datasets](#5️⃣-descargar-y-ubicar-datasets)
-  - [6️⃣ Entrenar Modelos (obligatorio antes de Sprint 3 y 4)](#6️⃣-entrenar-modelos-obligatorio-antes-de-sprint-3-y-4)
+  - [1. Clonar el repositorio](#1-clonar-el-repositorio)
+  - [2. Descarga de datasets](#2-descarga-de-datasets)
+    - [📁 Ubicación esperada](#-ubicación-esperada)
+  - [3. Crear Entorno Virtual](#3-crear-entorno-virtual)
+  - [4. Instalar Dependencias](#4-instalar-dependencias)
+  - [5. Configurar Kernel de Jupyter (para Sprint 2)](#5-configurar-kernel-de-jupyter-para-sprint-2)
+  - [6. Descargar y Ubicar Datasets](#6-descargar-y-ubicar-datasets)
+  - [7. Entrenar Modelos (obligatorio antes de Sprint 3 y 4)](#7-entrenar-modelos-obligatorio-antes-de-sprint-3-y-4)
+  - [8. Iniciar el Dashboard](#8-iniciar-el-dashboard)
 - [🧪 Sprint 2: Análisis y Clusterización](#-sprint-2-análisis-y-clusterización)
   - [🎯 Objetivos](#-objetivos)
   - [🛠️ Tecnologías Utilizadas](#️-tecnologías-utilizadas)
@@ -48,21 +49,18 @@ Sistema completo de análisis, clusterización, predicción y recomendaciones ac
 - [📊 Sprint 4: Dashboard Interactivo](#-sprint-4-dashboard-interactivo)
   - [🎯 Objetivos](#-objetivos-2)
   - [🛠️ Tecnologías Utilizadas](#️-tecnologías-utilizadas-2)
-  - [🚀 Iniciar el Dashboard](#-iniciar-el-dashboard)
   - [🎨 Funciones del Dashboard](#-funciones-del-dashboard)
     - [1️⃣ Predicción Individual](#1️⃣-predicción-individual)
     - [2️⃣ Gráfico Radar Comparativo](#2️⃣-gráfico-radar-comparativo)
     - [3️⃣ Estadísticas Globales](#3️⃣-estadísticas-globales)
     - [4️⃣ Historial Completo](#4️⃣-historial-completo)
     - [5️⃣ Búsqueda por Estudiante](#5️⃣-búsqueda-por-estudiante)
-    - [6️⃣ Limpieza de Historial (`/clear-history`)](#6️⃣-limpieza-de-historial-clear-history)
+    - [6️⃣ Limpieza de Historial](#6️⃣-limpieza-de-historial)
     - [7️⃣ Estado de la API](#7️⃣-estado-de-la-api)
 - [🔄 Flujo de Trabajo Completo](#-flujo-de-trabajo-completo)
-- [🧱 Pipeline Completo Paso a Paso](#-pipeline-completo-paso-a-paso)
 - [📈 Resultados y Conclusiones](#-resultados-y-conclusiones)
   - [🔹 Resultados Técnicos](#-resultados-técnicos)
   - [🔹 Conclusiones Académicas](#-conclusiones-académicas)
-  - [🔹 Hallazgos Principales](#-hallazgos-principales)
 
 ---
 
@@ -76,37 +74,33 @@ Este proyecto implementa un sistema integral capaz de:
 - 🎓 Recomendar carreras y áreas de refuerzo  
 - 📊 Visualizar resultados mediante un **dashboard interactivo**  
 
-Todo organizado en 3 sprints:  
+Todo organizado en 4 sprints:  
 | Sprint | Objetivo | Tecnologías |
 |--------|----------|-------------|
+| **Sprint 1** | Busca y limpieza de datasets | pandas, numpy, matplotlib, seaborn |
 | **Sprint 2** | Análisis y clustering | Scikit-learn, Statsmodels, NumPy |
 | **Sprint 3** | API REST para predicciones | FastAPI, Uvicorn, Pickle |
 | **Sprint 4** | Dashboard interactivo | Streamlit, Plotly |
 
 ---
-
+# 🧪 Sprint 1: Busca y limpieza de datasets
 # 📂 **Datasets**
 ### 📌 **Fuente**
 Datos reales del ICFES:
-- **Saber 11 – 2020-2**
-- **Saber Pro – 2021 a 2024**
+- **Saber 11 – 2020-2** *https://www.datos.gov.co/Educaci-n/PUNTAJEGLOBALPROMEDIO-SABERPRO-11-2020-2-PORDE/tagd-tfeb*
+  • Dataset 1 – Saber 11 (2020-2): contiene los resultados de los exámenes aplicados
+a estudiantes de educación media (colegios), lo que representa el punto de entrada
+al sistema de educación superior.
 
-### 📥 Descarga
-🔗 *Enlace a Google Drive (datasets limpios)*  
-*(https://drive.google.com/drive/folders/1O49JVxhRDbB1oaLek9JYvX1UWl59MEmo)*
-
-### 📁 Ubicación esperada
-data/
-├── Dataset1–Saber11(2020-2)_LIMPIO.csv
-└── Dataset2–SaberPro(2021–2024)_LIMPIO.csv
-
-⚠️ Nota importante: Los datasets NO están incluidos en el repositorio debido a su tamaño (>100 MB). El archivo .gitignore excluye automáticamente *.csv y la carpeta data/.
-
+- **Saber Pro – 2021 a 2024** *https://www.kaggle.com/datasets/williamrrubio/data-icfes*
+  • Dataset 2 – Saber Pro (2021–2024): reúne los resultados de los exámenes
+aplicados a estudiantes universitarios próximos a graduarse, lo que refleja el punto
+de salida del proceso formativo.
 
 ---
 
 # 🏗️ **Arquitectura del Proyecto**
-
+```
 Proyecto/
 │
 ├── src/icfes_analytics/          # 📦 Módulos analíticos (Sprint 2)
@@ -114,6 +108,7 @@ Proyecto/
 │   ├── timeseries.py             # Análisis de series temporales
 │   ├── rnn_numpy.py              # RNN implementada en NumPy puro
 │   ├── plots.py                  # Utilidades de visualización
+│   ├── forecasting.py
 │   └── __init__.py
 │
 ├── api/app/                      # 🌐 API REST (Sprint 3)
@@ -130,7 +125,7 @@ Proyecto/
 │   ├── kmeans.pkl                # Modelo K-Means
 │   └── feature_cols.pkl          # Lista de features
 │
-├── data/                         # 📁 Datasets (no incluidos en repo)
+├── data/                         # 📁 Datasets (no incluidos en el repo)
 │   ├── Dataset1–Saber11(2020-2)_LIMPIO.csv
 │   └── Dataset2–SaberPro(2021–2024)_LIMPIO.csv
 │
@@ -138,7 +133,7 @@ Proyecto/
 ├── train_save_models.py          # 🎓 Script de entrenamiento
 ├── requirements.txt              # 📋 Dependencias unificadas
 └── README.md                     # 📖 Este archivo
-
+```
 
 
 ---
@@ -150,21 +145,27 @@ Proyecto/
 - Git
 - Windows / Linux / macOS
 
-### ✔️ Verificar versiones
-```bash
-python --version
-pip --version
-```
-
 
 # ⚙️ Instalación y Configuración
-## 1️⃣ Clonar el repositorio
+
+## 1. Clonar el repositorio
 ```
 git clone https://github.com/Andres-Nieto/Sprint2-Proyecto-Inteligencia-de-Negocios.git
 cd Sprint2-Proyecto-Inteligencia-de-Negocios
 ```
+## 2. Descarga de datasets
+🔗 *Enlace a Google Drive (datasets limpios)*  
+*(https://drive.google.com/drive/folders/1O49JVxhRDbB1oaLek9JYvX1UWl59MEmo)*
 
-## 2️⃣ Crear Entorno Virtual
+### 📁 Ubicación esperada
+```
+data/
+├── Dataset1–Saber11(2020-2)_LIMPIO.csv
+└── Dataset2–SaberPro(2021–2024)_LIMPIO.csv
+```
+⚠️ Nota importante: Los datasets NO están incluidos en el repositorio debido a su tamaño (>100 MB). El archivo .gitignore excluye automáticamente *.csv y la carpeta data/.
+
+## 3. Crear Entorno Virtual
 Windows (PowerShell):
 ```powershell
 python -m venv .venv
@@ -176,31 +177,42 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-## 3️⃣ Instalar Dependencias
+## 4. Instalar Dependencias
 ```
-python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## 4️⃣ Configurar Kernel de Jupyter (para Sprint 2)
+## 5. Configurar Kernel de Jupyter (para Sprint 2)
 ```
 python -m ipykernel install --user --name icfes-analytics
 ```
 
-## 5️⃣ Descargar y Ubicar Datasets
+## 6. Descargar y Ubicar Datasets
 - Descarga los CSV desde Google Drive
 - Crea la carpeta data/ en la raíz del proyecto
 - Copia los archivos CSV dentro de data/
 
-## 6️⃣ Entrenar Modelos (obligatorio antes de Sprint 3 y 4)
+## 7. Entrenar Modelos (obligatorio antes de Sprint 3 y 4)
 ```
 python train_save_models.py
 ```
-
 Esto generará los archivos en models/:
 - scaler.pkl - Normalizador de features
 - kmeans.pkl - Modelo de clustering
 - feature_cols.pkl - Lista de columnas utilizadas
+
+## 8. Iniciar el Dashboard
+```bash
+# Encender la API
+uvicorn api.app.main:app --reload
+
+# Encender el dashboard
+streamlit run dashboard/app.py
+```
+
+Disponible en: http://localhost:8501
+
+---
 
 # 🧪 Sprint 2: Análisis y Clusterización
 ## 🎯 Objetivos
@@ -274,11 +286,8 @@ y_pred, y_true, metrics = forecast_one_step_numpy(
     hidden_size=16,
     epochs=600
 )
-
 print(f"RNN Metrics: {metrics}")
 ```
-
----
 
 ## 📊 Resultados Clave del Sprint 2
 - Identificación de **5 perfiles académicos** mediante clustering.
@@ -323,6 +332,7 @@ http://127.0.0.1:8000
 | `/summary` | GET | Resumen por clúster |
 | `/student/{id}` | GET | Historial por estudiante |
 | `/clear-history` | DELETE | Limpia memoria |
+| `/forecast` | POST | Prediccion | 
 
 ## 🧠 Lógica de Recomendaciones
 Basada en:  
@@ -351,19 +361,6 @@ Basada en:
 - Plotly  
 - Requests  
 
-## 🚀 Iniciar el Dashboard
-```bash
-# Encender la API
-uvicorn api.app.main:app --reload
-
-# Encender el dashboard
-streamlit run dashboard/app.py
-```
-
-Disponible en: http://localhost:8501
-
----
-
 ## 🎨 Funciones del Dashboard
 
 ### 1️⃣ Predicción Individual
@@ -388,7 +385,7 @@ Compara:
 
 ### 5️⃣ Búsqueda por Estudiante  
 
-### 6️⃣ Limpieza de Historial (`/clear-history`)
+### 6️⃣ Limpieza de Historial
 
 ### 7️⃣ Estado de la API  
 
@@ -400,28 +397,9 @@ SPRINT 2 → Clustering + Series Temporales
         ↓
 train_save_models.py → Entrena y guarda modelos
         ↓
-SPRINT 3 → API con 7 endpoints
+SPRINT 3 → API con 8 endpoints
         ↓
 SPRINT 4 → Dashboard conectado a la API
-```
-
----
-
-# 🧱 Pipeline Completo Paso a Paso
-
-1. **Preparación de Datos**
-2. **Clustering y series temporales (Sprint 2)**
-3. **Entrenamiento:**
-```bash
-python train_save_models.py
-```
-4. **API:**
-```bash
-uvicorn api.app.main:app --reload
-```
-5. **Dashboard:**
-```bash
-streamlit run dashboard/app.py
 ```
 
 ---
@@ -434,7 +412,7 @@ streamlit run dashboard/app.py
 | Modelos clustering | K-Means, DBSCAN, Jerárquico |
 | Número clústeres | 5 |
 | RMSE ARIMA | ~15 |
-| Endpoints API | 7 |
+| Endpoints API | 8 |
 | Tiempo API | < 50 ms |
 | Visualizaciones | 5 tipos |
 
@@ -444,10 +422,3 @@ streamlit run dashboard/app.py
 - RNN útil para patrones no lineales  
 - Arquitectura escalable  
 - Dashboard accesible y claro  
-
-## 🔹 Hallazgos Principales
-- Perfil STEM  
-- Perfil Humanístico  
-- Perfil Balanceado  
-- Perfil en Desarrollo  
-- Perfil Bilingüe  

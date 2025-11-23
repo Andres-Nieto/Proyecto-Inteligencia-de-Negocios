@@ -23,5 +23,5 @@ streamlit
 requests
 
 # Entorno de desarrollo (notebooks)
-jupyter>=1.0
-ipykernel>=6.29
+#jupyter>=1.0
+#ipykernel>=6.29

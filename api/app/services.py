@@ -3,6 +3,21 @@ import joblib
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import sys
+import os
+from functools import lru_cache
+@lru_cache(maxsize=1)
+def load_data():
+    return pd.read_csv("data/Dataset2-SaberPro(2021-2024)_LIMPIO.csv")
+from src.icfes_analytics.forecasting import forecast_next_period
+
+# --- FIX PARA IMPORTAR icfes_analytics DESDE /src (muy importante) ---
+BASE_DIR = Path(__file__).resolve().parents[2]     # Proyecto/
+SRC_DIR = BASE_DIR / "src"
+
+if SRC_DIR.exists():
+    sys.path.append(str(SRC_DIR))
+
 
 #Se cargan los modelos entrenados, se procesan los datos de los estudiantes
 # Se generan las recomendaciones automáticas
@@ -236,3 +251,31 @@ def get_summary():
 def clear_history():
     HISTORY.clear()
     return {"message": "Historial eliminado correctamente."}
+
+
+def get_forecast(group_col: str, group_value: str, target_col: str):
+
+    df = load_data()   # <-- CARGA UNA VEZ Y QUEDA EN MEMORIA
+
+    df[group_col] = df[group_col].astype(str)
+    df_filtered = df[df[group_col] == group_value]
+    if df_filtered.empty:
+        return {"error": "No hay datos suficientes para esta universidad."}
+
+    result = forecast_next_period(df_filtered, group_col, target_col)
+
+    # Si hubo error
+    if "error" in result:
+        return result
+
+    # Nuevo historial simplificado
+    history = result["historical"]
+
+    print("TARGET RECIBIDO:", target_col)
+
+    return {
+        "historical": history,
+        "forecast": result["forecast"],
+        "next_year": result["next_year"]
+
+    }

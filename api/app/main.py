@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from .schemas import (
-    ScoresInput, PredictResponse, HealthResponse,
+    ForecastRequest, ScoresInput, PredictResponse, HealthResponse,
     ClusterRequest, ClusterResponse
 )
 
@@ -12,6 +12,7 @@ from .services import (
     get_history, save_to_history,
     predict_cluster, recommend_from_cluster
 )
+from api.app import services
 
 app = FastAPI(title="ICFES Recommendation API", version="1.0")
 
@@ -109,3 +110,11 @@ def dataset_sample(name: str, limit: int = 100, columns: str | None = None):
     from .services import get_dataset_sample
     cols = [c.strip() for c in columns.split(",")] if columns else None
     return get_dataset_sample(name, limit=limit, columns=cols)
+
+@app.post("/forecast")
+def forecast(req: ForecastRequest):
+    return services.get_forecast(
+        req.group_col,
+        req.group_value,
+        req.target_col
+    )
