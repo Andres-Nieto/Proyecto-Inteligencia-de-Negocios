@@ -20,4 +20,5 @@ from .rnn_numpy import (
     rnn_train,
     rnn_predict_next,
     forecast_one_step_numpy,
+    forecast_multi_step_numpy,
 )

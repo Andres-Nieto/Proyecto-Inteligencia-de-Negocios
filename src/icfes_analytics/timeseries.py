@@ -135,3 +135,81 @@ def plot_arima_forecast(train: pd.Series, test: pd.Series, y_pred: float, order_
     for s in ['top','right']:
         ax.spines[s].set_visible(False)
     plt.show()
+
+
+def fit_arima_multi_step(
+    series: pd.Series,
+    horizon: int = 5,
+    orders: Optional[Iterable[Tuple[int, int, int]]] = None,
+    p_values: Optional[Iterable[int]] = None,
+    d_values: Optional[Iterable[int]] = None,
+    q_values: Optional[Iterable[int]] = None,
+    retry_small_if_none: bool = True,
+):
+    """Selecciona ARIMA por AIC y pronostica varios pasos (horizon >= 1).
+
+    Mantiene la lógica de un solo paso para métricas: se reserva el último punto
+    como test y se calcula MAE/RMSE solo para el primer pronóstico. Los pasos
+    futuros adicionales no tienen valor real disponible y se devuelven sin métricas.
+    """
+    if horizon < 1:
+        raise ValueError("horizon debe ser >= 1")
+    series = series.asfreq('QS-MAR').sort_index().dropna()
+    if len(series) < 2:
+        raise RuntimeError("Serie demasiado corta para ajustar ARIMA multi-step.")
+    if orders is None:
+        if p_values is None:
+            p_values = [0, 1, 2, 3]
+        if d_values is None:
+            d_values = [0, 1, 2]
+        if q_values is None:
+            q_values = [0, 1, 2, 3]
+        orders = [(p, d, q) for p in p_values for d in d_values for q in q_values if not (p == 0 and d == 0 and q == 0)]
+
+    train = series.iloc[:-1]
+    test = series.iloc[-1:]
+
+    def _try_fit(order_list: Iterable[Tuple[int, int, int]]):
+        best_local = None
+        best_aic_local = np.inf
+        for order in order_list:
+            try:
+                res = sm.tsa.ARIMA(train, order=order).fit()
+                if res.aic < best_aic_local:
+                    best_aic_local = res.aic
+                    best_local = (order, res)
+            except Exception:
+                continue
+        return best_local, best_aic_local
+
+    best, best_aic = _try_fit(orders)
+    if best is None and retry_small_if_none:
+        small_orders = [(p, d, q) for p in [0, 1] for d in [0, 1] for q in [0, 1] if not (p == 0 and d == 0 and q == 0)]
+        best, best_aic = _try_fit(small_orders)
+    if best is None:
+        raise RuntimeError("No fue posible ajustar ningún modelo ARIMA.")
+
+    order_sel, res_sel = best
+    fc = res_sel.forecast(steps=horizon)  # incluye punto test y futuros
+    # Métricas solo para primer paso (comparado contra test real)
+    y_pred_first = float(fc.iloc[0])
+    y_true = float(test.iloc[0])
+    mae = mean_absolute_error([y_true],[y_pred_first])
+    rmse = mean_squared_error([y_true],[y_pred_first]) ** 0.5
+    metrics = {'AIC': float(best_aic), 'MAE_1step': float(mae), 'RMSE_1step': float(rmse)}
+    return order_sel, res_sel, fc, y_true, train, test, metrics
+
+
+def plot_arima_forecast_multi(train: pd.Series, test: pd.Series, y_pred_series: pd.Series, order_sel: Tuple[int,int,int]):
+    fig, ax = plt.subplots(figsize=(12,4))
+    ax.plot(train.index, train.values, label='train', color='#1f77b4', lw=2)
+    ax.plot(test.index, test.values, label='test real', color='black', lw=2)
+    # Pronóstico multi-paso
+    ax.plot(y_pred_series.index, y_pred_series.values, '--o', color='#d62728', ms=5, label='ARIMA pred')
+    ax.set_title(f'ARIMA{order_sel} - pronóstico {len(y_pred_series)} pasos')
+    ax.set_xlabel('Periodo'); ax.set_ylabel('Puntaje promedio')
+    ax.grid(True, alpha=0.9)
+    ax.legend(frameon=False)
+    for s in ['top','right']:
+        ax.spines[s].set_visible(False)
+    plt.show()
